@@ -1,0 +1,21 @@
+{
+  "name": "rollcall",
+  "version": "1.0.0",
+  "description": "Rollcall",
+  "main": "index.js",
+  "dependencies": {
+    "faunadb": "^2.11.1"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BraydenGirard/rollcall-v2.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BraydenGirard/rollcall-v2/issues"
+  },
+  "homepage": "https://github.com/BraydenGirard/rollcall-v2#readme"
+}
