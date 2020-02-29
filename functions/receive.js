@@ -1,26 +1,27 @@
-/*
 var faunadb = require("faunadb"),
   q = faunadb.query;
 var client = new faunadb.Client({ secret: process.env.FAUNADB_SERVER_SECRET });
 const twilio = require("twilio");
-const client = new twilio(
+const twillioClient = new twilio(
   process.env.TWILLIO_ACCOUNT_ID,
   process.env.TWILLIO_AUTH_TOKEN
 );
+const querystring = require("querystring");
 
-const nextGame = () => {
+const nextGame = async () => {
 
     const now = new Date();
 
     let closest = Infinity;
 
+    let dates = await getAllFromFauna('dates');
     for (const d of dates) {
 
-        const date = new Date(d)
+        const date = new Date(d.date)
 
         if (date >= now && (date < new Date(closest) || date < closest)) {
 
-            closest = d;
+            closest = d.date;
 
         }
 
@@ -33,13 +34,11 @@ const nextGame = () => {
     const diffInDays = diffInTime / (1000 * 3600 * 24); 
 
     if(diffInDays > 8) {
-
         return null;   
 
     }
 
     return closest
-
 }
 
 
@@ -48,7 +47,7 @@ const validResponseDay = () => {
 
     const now = new Date();
 
-    if(now.getDay === 0 || now.getDay === 1 || now.getDay === 2) {
+    if(now.getDay === 0 || now.getDay === 1 || now.getDay === 2 || now.getDay === 6) {
 
         return false;
 
@@ -68,17 +67,15 @@ const resendRollCall = async phoneNumeber => {
 
     try {
 
-        const message = await client.messages.create({
+        const message = await twillioClient.messages.create({
 
             body: 'Invalid response, please reply with either "yes" or "no".',
 
-            to: phoneNumeber,  // Text this number +16134080538
+            to: phoneNumeber,
 
-            from: '+15878186820' // From a valid Twilio number
+            from: '+15878186820'
 
         })
-
-        console.log(message)
 
     } catch(err) {
 
@@ -104,22 +101,57 @@ const playerAlreadyAnswered = (playersChecked, player) => {
 
 }
 
+const getAllFromFauna = async index => {
+    try {
+        const response = await client.query(q.Paginate(q.Match(q.Ref(`indexes/all_${index}`))));
+        const playerRefs = response.data;
+        const getAllPlayerDataQuery = playerRefs.map(ref => {
+            return q.Get(ref);
+        });
+        const playerData = await client.query(getAllPlayerDataQuery);
+        const data = [];
+        for (const player of playerData) {
+            data.push(player.data);
+        }
+        return data;
+    } catch(error) {
+        console.log(error);
+        return [];
+    }
+}
 
-exports.handler = function(event, context, callback) {
+const createGame = async game => {
+    try {
+        await client.query(q.Create(q.Collection("games"),{ data: game }));
+    } catch(error) {
+        console.log(error);
+    }
+}
 
-const message = request.body.Body.toLowerCase().trim();
+const updateGame = async game => {
+    console.log(`Function 'todo-update' invoked. update date: ${game.date}`)
+    try {
+        await client.query(q.Update(q.Index(`update_game_by_date`), game));
+    } catch(error) {
+        console.log(error);
+    }
+}
 
-  const phoneNumber = request.body.From;
+
+exports.handler = async function(event, context, callback) {
+    const params = querystring.parse(event.body);
+    const message = params.Body.toLowerCase().trim(); 
+    const phoneNumber = params.From;
 
   if(!validResponseDay()) {
 
-      await client.messages.create({
+      await twillioClient.messages.create({
 
                 body: `You can not check-in at this time, please message Brayden directly at 613-408-0538.`,
 
-                to: phoneNumber,  // Text this number +16134080538
+                to: phoneNumber,
 
-                from: '+15878186820' // From a valid Twilio number
+                from: '+15878186820'
 
             });
 
@@ -127,35 +159,39 @@ const message = request.body.Body.toLowerCase().trim();
 
   }
 
-  const player = db.get('players')
-
-    .find({ phone: phoneNumber })
-
-    .value();
-
-  if(!player) {
-
-    console.log(`The person with the number ${phoneNumber} is not in the database as a player`);
-
-    return response.status(200).send();
-
+  const players = await getAllFromFauna('players');
+  let player = null;
+  for(const thePlayer of players) {
+      if(thePlayer.phone === phoneNumber) {
+          player = thePlayer;
+          break;
+      }
   }
 
-    const gameDate = nextGame();
+  if(!player) {
+    return callback(null, {
+        statusCode: 404,
+        body: "Player # not found"
+    });
+  }
 
-    const game = db.get('games')
+    const gameDate = await nextGame();
 
-    .find({ date: gameDate })
+    const games = await getAllFromFauna('games');
 
-    .value();
+    let game = null;
+
+    for(const theGame of games) {
+        if(theGame.date === gameDate) {
+            game = theGame;
+            break;
+        }
+    }
 
   if(message === 'yes') {
 
     if(!game) {
-
-        db.get('games')
-
-        .push({
+        await createGame({
 
             date: gameDate,
 
@@ -163,53 +199,50 @@ const message = request.body.Body.toLowerCase().trim();
 
             playersOut: []
 
-        })
-
-        .write();
-
+        });
     } else {
 
         if(playerAlreadyAnswered(game.playersIn, player)) {
 
-            return response.status(200).send();
+            return callback(null, {
+                statusCode: 200,
+                body: "Response received"
+            });
 
         }
 
         if(playerAlreadyAnswered(game.playersOut, player)) {
 
-            await client.messages.create({
+            await twillioClient.messages.create({
 
                 body: `You have already said you are not playing this week. If your response changed, you must message Brayden directly at 613-408-0538.`,
 
-                to: player.phone,  // Text this number +16134080538
+                to: player.phone,
 
-                from: '+15878186820' // From a valid Twilio number
+                from: '+15878186820'
 
             });
 
-            return response.status(200).send();
+            return callback(null, {
+                statusCode: 200,
+                body: "Response received"
+            });
 
         }
 
         game.playersIn.push(player.name);
 
-        db.get('games')
-
-        .find({ date: gameDate })
-
-        .update('playersIn', game.playersIn)
-
-        .write();
+        await updateGame(game);
 
     }
 
-    await client.messages.create({
+    await twillioClient.messages.create({
 
         body: `Thanks for the response. If your response changes for some reason, you must message Brayden directly at 613-408-0538.`,
 
-        to: player.phone,  // Text this number +16134080538
+        to: player.phone,
 
-        from: '+15878186820' // From a valid Twilio number
+        from: '+15878186820'
 
     });
 
@@ -219,63 +252,59 @@ const message = request.body.Body.toLowerCase().trim();
 
     if(!game) {
 
-        db.get('games')
-
-        .push({
+        await createGame({
 
             date: gameDate,
 
-            playersIn: [],
+            playersOut: [player.name],
 
-            playersOut: [player.name]
+            playersIn: []
 
-        })
-
-        .write();
+        });
 
     } else {
 
         if(playerAlreadyAnswered(game.playersOut, player)) {
 
-            return response.status(200).send();
+            return callback(null, {
+                statusCode: 200,
+                body: "Response received"
+            });
 
         }
 
         if(playerAlreadyAnswered(game.playersIn, player)) {
 
-            await client.messages.create({
+            await twillioClient.messages.create({
 
                 body: `You have already said you are playing this week. If your response changed, you must message Brayden directly at 613-408-0538.`,
 
-                to: player.phone,  // Text this number +16134080538
+                to: player.phone,
 
-                from: '+15878186820' // From a valid Twilio number
+                from: '+15878186820'
 
             });
 
-            return response.status(200).send();
+            return callback(null, {
+                statusCode: 200,
+                body: "Response received"
+            });
 
         }
 
         game.playersOut.push(player.name);
 
-        db.get('games')
-
-        .find({ date: gameDate })
-
-        .update('playersOut', game.playersOut)
-
-        .write();
+        await updateGame(game);
 
     }
 
-    await client.messages.create({
+    await twillioClient.messages.create({
 
         body: `Thanks for the response. If your response changes for some reason, you must message Brayden directly at 613-408-0538.`,
 
-        to: player.phone,  // Text this number +16134080538
+        to: player.phone,
 
-        from: '+15878186820' // From a valid Twilio number
+        from: '+15878186820'
 
     });
 
@@ -290,4 +319,3 @@ const message = request.body.Body.toLowerCase().trim();
         body: "Response received"
     });
 }
-*/

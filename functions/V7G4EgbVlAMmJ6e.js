@@ -1,30 +1,80 @@
-/*
 var faunadb = require('faunadb'),
   q = faunadb.query
 var client = new faunadb.Client({ secret: process.env.FAUNADB_SERVER_SECRET })
 const twilio = require('twilio');
-const client = new twilio(process.env.TWILLIO_ACCOUNT_ID, process.env.TWILLIO_AUTH_TOKEN);
+const twillioClient = new twilio(process.env.TWILLIO_ACCOUNT_ID, process.env.TWILLIO_AUTH_TOKEN);
 
-exports.handler = function(event, context, callback) {
-    const theDbPlayers = db.get("players").value();
+const getAllFromFauna = async index => {
+    try {
+        const response = await client.query(q.Paginate(q.Match(q.Ref(`indexes/all_${index}`))));
+        const playerRefs = response.data;
+        console.log("Player refs", playerRefs);
+        console.log(`${playerRefs.length} players found`);
+        const getAllPlayerDataQuery = playerRefs.map(ref => {
+            return q.Get(ref);
+        });
+        const playerData = await client.query(getAllPlayerDataQuery);
+        const data = [];
+        for (const player of playerData) {
+            data.push(player.data);
+        }
+        return data;
+    } catch(error) {
+        console.log(error);
+        return [];
+    }
+  }
+  
+  const nextGame = async () => {
+    const now = new Date();
+  
+    let closest = Infinity;
+    let dates = await getAllFromFauna('dates');
+    for (const d of dates) {
+      const date = new Date(d.date);
+        console.log(date);
+        console.log(now);
+        console.log(closest);
+      if (date >= now && (date < new Date(closest) || date < closest)) {
+        closest = d.date;
+      }
+    }
+  
+    const closestDate = new Date(closest);
+  
+    const diffInTime = closestDate.getTime() - now.getTime();
+  
+    const diffInDays = diffInTime / (1000 * 3600 * 24);
+  
+    if (diffInDays > 8) {
+      return null;
+    }
+  
+    return closest;
+  };
+
+exports.handler = async function(event, context, callback) {
+    const players = await getAllFromFauna('players');
 
     try {
 
-        const next = nextGame();
+        const next = await nextGame();
 
         if(next) {
 
             for(const player of players) {
+                // Remove after testing
+                if(player.name === 'Megan Girard') {
+                    await twillioClient.messages.create({
 
-                await client.messages.create({
+                        body: `Will you be attending hockey on ${next}, please reply with either "yes" or "no".`,
 
-                    body: `Will you be attending hockey on ${next}, please reply with either "yes" or "no".`,
+                        to: player.phone,  // Text this number +16134080538
 
-                    to: player.phone,  // Text this number +16134080538
+                        from: '+15878186820' // From a valid Twilio number
 
-                    from: '+15878186820' // From a valid Twilio number
-
-                });
+                    });
+                }
 
             }
 
@@ -32,7 +82,7 @@ exports.handler = function(event, context, callback) {
 
             for(const player of players) {
 
-                await client.messages.create({
+                await twillioClient.messages.create({
 
                     body: `There will be no game this Sunday, the next game is will be the following Sunday and you will get another notification about it next week.`,
 
@@ -56,4 +106,3 @@ exports.handler = function(event, context, callback) {
         body: "Rollcall sent"
     });
 };
-*/

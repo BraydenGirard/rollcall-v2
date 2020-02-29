@@ -1,18 +1,38 @@
-/*
 var faunadb = require("faunadb"),
   q = faunadb.query;
 var client = new faunadb.Client({ secret: process.env.FAUNADB_SERVER_SECRET });
 
-const nextGame = () => {
+const getAllFromFauna = async index => {
+  try {
+      const response = await client.query(q.Paginate(q.Match(q.Ref(`indexes/all_${index}`))));
+      const playerRefs = response.data;
+      console.log("Player refs", playerRefs);
+      console.log(`${playerRefs.length} players found`);
+      const getAllPlayerDataQuery = playerRefs.map(ref => {
+          return q.Get(ref);
+      });
+      const playerData = await client.query(getAllPlayerDataQuery);
+      const data = [];
+      for (const player of playerData) {
+          data.push(player.data);
+      }
+      return data;
+  } catch(error) {
+      console.log(error);
+      return [];
+  }
+}
+
+const nextGame = async () => {
   const now = new Date();
 
   let closest = Infinity;
-
+  let dates = await getAllFromFauna('dates');
   for (const d of dates) {
-    const date = new Date(d);
+    const date = new Date(d.date);
 
     if (date >= now && (date < new Date(closest) || date < closest)) {
-      closest = d;
+      closest = d.date;
     }
   }
 
@@ -29,27 +49,29 @@ const nextGame = () => {
   return closest;
 };
 
-exports.handler = function(event, context, callback) {
-  const gameDate = nextGame();
+exports.handler = async function(event, context, callback) {
+  const gameDate = await nextGame();
 
   if (gameDate) {
-    const game = db
-      .get("games")
+    const games = await getAllFromFauna('games');
 
-      .find({ date: gameDate })
+    let game = null;
 
-      .value();
-
-    if (!game) {
-      const games = db
-        .get("games")
-
-        .value();
-
-      return response.status(200).send(games);
+    for(const theGame of games) {
+        if(theGame.date === gameDate) {
+            game = theGame;
+            break;
+        }
     }
 
-    const players = db.get("players").value();
+    if (!game) {
+      return callback(null, {
+        statusCode: 200,
+        body: games
+      });
+    }
+
+    const players = await getAllFromFauna('players');
 
     const unknownPlayers = [];
 
@@ -73,32 +95,9 @@ exports.handler = function(event, context, callback) {
 
     game["unknownPlayers"] = unknownPlayers;
 
-    let playersInFullData = [];
-
-    for (player of players) {
-      for (inPlayer of game.playersIn) {
-        if (player.name === inPlayer) {
-          playersInFullData.push(player);
-        }
-      }
-    }
-
-    const teams = playerSort.generateTeams(playersInFullData);
-
-    game["teamBrown"] = teams.brownTeam;
-
-    game["teamBlack"] = teams.blackTeam;
-
-    return response.render("status", {
-      blackPlayers: game.teamBlack,
-
-      brownPlayers: game.teamBrown,
-
-      playersIn: game.playersIn,
-
-      playersOut: game.playersOut,
-
-      playersUnknown: game.unknownPlayers
+    return callback(null, {
+      statusCode: 200,
+      body: game
     });
   }
 
@@ -107,4 +106,3 @@ exports.handler = function(event, context, callback) {
     body: "No game this week"
   });
 };
-*/
