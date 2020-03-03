@@ -99,6 +99,9 @@ exports.handler = async function(event, context, callback) {
     const playersOut = game.playersOut || [];
 
     return callback(null, {
+      headers: {
+        "Content-Type": "text/html"
+      },
       statusCode: 200,
       body:
         "<strong>Players In:</strong> " +
@@ -111,6 +114,9 @@ exports.handler = async function(event, context, callback) {
   }
 
   callback(null, {
+    headers: {
+      "Content-Type": "text/html"
+    },
     statusCode: 200,
     body: "<h1>No game this week!</h1>"
   });
