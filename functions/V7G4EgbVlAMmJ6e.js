@@ -61,8 +61,6 @@ exports.handler = async function(event, context, callback) {
 
     if (next) {
       for (const player of players) {
-        // Remove after testing
-        if (player.name === "Brayden Girard") {
           await twillioClient.messages.create({
             body: `Will you be attending hockey on ${next}, please reply with either "yes" or "no".`,
 
@@ -70,7 +68,6 @@ exports.handler = async function(event, context, callback) {
 
             from: "+15878186820" // From a valid Twilio number
           });
-        }
       }
     } else {
       for (const player of players) {
