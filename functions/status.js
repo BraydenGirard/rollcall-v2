@@ -51,10 +51,10 @@ const nextGame = async () => {
 
 exports.handler = async function(event, context, callback) {
   const gameDate = await nextGame();
-
+  console.log(gameDate)
   if (gameDate) {
     const games = await getAllFromFauna("games");
-
+    console.log(games);
     let game = null;
 
     for (const theGame of games) {
