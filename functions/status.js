@@ -89,7 +89,7 @@ exports.handler = async function(event, context, callback) {
       }
 
       if (!found) {
-        unknownPlayers.push(player.name);
+        unknownPlayers.push(player.name + '(' + player.phone + ')');
       }
     }
 
