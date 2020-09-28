@@ -10,7 +10,7 @@ const querystring = require("querystring");
 
 const nextGame = async () => {
   const now = new Date();
-
+  now.setHours( now.getHours() - 4 );
   let closest = Infinity;
 
   let dates = await getAllFromFauna("dates");
@@ -37,7 +37,7 @@ const nextGame = async () => {
 
 const validResponseDay = () => {
   const now = new Date();
-
+  now.setHours( now.getHours() - 4 );
   if (
     now.getDay === 0 ||
     now.getDay === 1 ||
