@@ -121,9 +121,9 @@ exports.handler = async function(event, context, callback) {
       },
       statusCode: 200,
       body:
-        "<strong>Players In:</strong> " +
+        "<strong>Players Attending:</strong> " +
         playersIn.toString().replace(/,/g, "") +
-        "<br><strong>Players Out:</strong> " +
+        "<br><strong>Players Not Available:</strong> " +
         playersOut.toString().replace(/,/g, "") +
         "<br><strong>Players Unknown:</strong> " +
         unknownPlayers.toString().replace(/,/g, "")
