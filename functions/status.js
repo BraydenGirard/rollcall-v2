@@ -84,7 +84,11 @@ exports.handler = async function(event, context, callback) {
       for (playerName of game.playersIn) {
         if (player.name === playerName) {
           found = true;
-          playersIn.push(player.name + ' (' + player.phone + ')');
+          if(playersIn.length == 0) {
+              playersIn.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+          } else {
+            playersIn.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+          }
           break;
         }
       }
@@ -93,12 +97,20 @@ exports.handler = async function(event, context, callback) {
         for (playerName of game.playersOut) {
           if (player.name === playerName) {
             found = true;
-            playersOut.push(player.name + ' (' + player.phone + ')');            
+            if(playersOut.length == 0) {
+              playersOut.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+            } else {
+              playersOut.push(player.name + ' (' + player.phone + ')<br>');
+            }
             break;
           }
         }
         if (!found) {
-          unknownPlayers.push(player.name + ' (' + player.phone + ')');
+          if(unknownPlayers.length == 0) {
+              unknownPlayers.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+          } else {
+            unknownPlayers.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+          }
         }
       }
     }    
