@@ -25,6 +25,7 @@ const getAllFromFauna = async index => {
 
 const nextGame = async () => {
   const now = new Date();
+  now.setHours( now.getHours() - 4 );
   console.log(now.toUTCString())
   let closest = Infinity;
   let dates = await getAllFromFauna("dates");
