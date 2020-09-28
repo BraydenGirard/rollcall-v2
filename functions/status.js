@@ -87,7 +87,7 @@ exports.handler = async function(event, context, callback) {
           if(playersIn.length == 0) {
               playersIn.push('<br>' + player.name + ' (' + player.phone + ')<br>');
           } else {
-            playersIn.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+            playersIn.push(player.name + ' (' + player.phone + ')<br>');
           }
           break;
         }
@@ -109,7 +109,7 @@ exports.handler = async function(event, context, callback) {
           if(unknownPlayers.length == 0) {
               unknownPlayers.push('<br>' + player.name + ' (' + player.phone + ')<br>');
           } else {
-            unknownPlayers.push('<br>' + player.name + ' (' + player.phone + ')<br>');
+            unknownPlayers.push(player.name + ' (' + player.phone + ')<br>');
           }
         }
       }
@@ -122,11 +122,11 @@ exports.handler = async function(event, context, callback) {
       statusCode: 200,
       body:
         "<strong>Players In:</strong> " +
-        playersIn.toString().replace(/,/g, ", ") +
+        playersIn.toString() +
         "<br><strong>Players Out:</strong> " +
-        playersOut.toString().replace(/,/g, ", ") +
+        playersOut.toString() +
         "<br><strong>Players Unknown:</strong> " +
-        unknownPlayers.toString().replace(/,/g, ", ")
+        unknownPlayers.toString()
     });
   }
 
