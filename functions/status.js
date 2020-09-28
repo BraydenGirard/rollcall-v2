@@ -122,11 +122,11 @@ exports.handler = async function(event, context, callback) {
       statusCode: 200,
       body:
         "<strong>Players In:</strong> " +
-        playersIn.toString().replaceAll(",", "") +
+        playersIn.toString().replace(/,/g, "") +
         "<br><strong>Players Out:</strong> " +
-        playersOut.toString().replaceAll(",", "") +
+        playersOut.toString().replace(/,/g, "") +
         "<br><strong>Players Unknown:</strong> " +
-        unknownPlayers.toString().replaceAll(",", "")
+        unknownPlayers.toString().replace(/,/g, "")
     });
   }
 
