@@ -75,29 +75,33 @@ exports.handler = async function(event, context, callback) {
     const players = await getAllFromFauna("players");
 
     const unknownPlayers = [];
-
-    const playersInOut = game.playersIn.concat(game.playersOut);
+    const playersIn = [];
+    const playersOut = [];
 
     for (player of players) {
       let found = false;
 
-      for (playerName of playersInOut) {
+      for (playerName of game.playersIn) {
         if (player.name === playerName) {
           found = true;
-
+          playersIn.push(player.name + ' (' + player.phone + ')');
           break;
         }
       }
 
       if (!found) {
-        unknownPlayers.push(player.name + '(' + player.phone + ')');
+        for (playerName of game.playersOut) {
+          if (player.name === playerName) {
+            found = true;
+            playersOut.push(player.name + ' (' + player.phone + ')');            
+            break;
+          }
+        }
+        if (!found) {
+          unknownPlayers.push(player.name + ' (' + player.phone + ')');
+        }
       }
-    }
-
-    game["unknownPlayers"] = unknownPlayers;
-
-    const playersIn = game.playersIn || [];
-    const playersOut = game.playersOut || [];
+    }    
 
     return callback(null, {
       headers: {
@@ -106,11 +110,11 @@ exports.handler = async function(event, context, callback) {
       statusCode: 200,
       body:
         "<strong>Players In:</strong> " +
-        game.playersIn.toString().replace(/,/g, ", ") +
+        playersIn.toString().replace(/,/g, ", ") +
         "<br><strong>Players Out:</strong> " +
-        game.playersOut.toString().replace(/,/g, ", ") +
+        playersOut.toString().replace(/,/g, ", ") +
         "<br><strong>Players Unknown:</strong> " +
-        game.unknownPlayers.toString().replace(/,/g, ", ")
+        unknownPlayers.toString().replace(/,/g, ", ")
     });
   }
 
