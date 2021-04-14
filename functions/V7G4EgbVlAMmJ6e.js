@@ -59,7 +59,7 @@ exports.handler = async function(event, context, callback) {
   try {
     const next = await nextGame();
 
-    if (next) {
+    if (next !== Infinity) {
       for (const player of players) {
           await twillioClient.messages.create({
             body: `Will you be attending hockey on ${next}, please reply with either "yes" or "no".`,
